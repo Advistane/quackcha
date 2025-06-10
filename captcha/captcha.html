@@ -92,7 +92,7 @@
       // Speech synthesis
       function speakAndPlay(message, callback) {
         const utter = new window.SpeechSynthesisUtterance(message);
-        utter.rate = 8.45; // Slow speech
+        utter.rate = .45; // Slow speech
         utter.onend = callback;
         window.speechSynthesis.speak(utter);
       }
