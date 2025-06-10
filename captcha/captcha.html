@@ -2,50 +2,209 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Joel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
+  <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/css">
     html,
     body {
-      background: pink;
+      background: #f3f4f6;
       margin: 0;
       padding: 0;
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 
     #captcha-container {
       background: white;
       width: 390px;
-      height: 300px;
+      min-height: 300px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      border-radius: 0.5rem;
     }
-
-    /* Your style here... */
   </style>
 </head>
 
-<body>
-  <div id="captcha-container">
-    <!-- Add your CAPTCHA here: -->
-    Hello world!
+<body class="flex items-center justify-center min-h-screen">
+  <div id="captcha-container" class="p-6 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-gray-900">Audio CAPTCHA</h2>
+      <div class="flex items-center space-x-2" title="This CAPTCHA helps us verify you're human by testing your ability to identify artificial bird sounds.">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+      </div>
+    </div>
 
-    <!-- We've added a sample button. Feel free to remove it: -->
-    <button id="solve">
-      Solve!
-    </button>
+    <div class="flex-1">
+      <button id="play-sounds" class="w-full mb-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+        Start Audio CAPTCHA
+      </button>
+
+      <form id="sound-choice-form" class="space-y-4">
+        <fieldset>
+          <legend class="text-sm font-medium text-gray-700 mb-2">Which sound do you not believe came from a real bird?</legend>
+          <div id="radio-group" class="grid grid-cols-2 gap-2"></div>
+        </fieldset>
+      </form>
+    </div>
+
+    <div class="mt-4 text-xs text-gray-500">
+      <p>This CAPTCHA helps us verify you're human by testing your ability to identify artificial bird sounds.</p>
+    </div>
   </div>
 
   <script type="text/javascript">
-    (function(window, document){
-      // This is how you tell the parent window that the CAPTCHA was successful.
-      function captchaSuccess() {
-        window.top.postMessage("success", '*');
+    (function(window, document) {
+      // Constants
+      const SOUND_FILES = [
+        '/sounds/birds1.mp3',
+        '/sounds/birds2.mp3',
+        '/sounds/birds3.mp3',
+        '/sounds/birds4.mp3',
+        '/sounds/birds5.mp3'
+      ];
+
+      // State management
+      const state = {
+        currentAudio: null,
+        isPlaying: false,
+        allSoundsPlayed: false,
+        correctAnswerIndex: -1
+      };
+
+      // Utility functions
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
       }
 
-      // Your CAPTCHA code goes here, we've added a simple example below:
-      document.getElementById('solve')
-           .addEventListener('click', () => captchaSuccess());
+      function stopPlayback() {
+        if (state.currentAudio) {
+          state.currentAudio.pause();
+          state.currentAudio.currentTime = 0;
+        }
+        window.speechSynthesis.cancel();
+        state.isPlaying = false;
+      }
 
+      // Speech synthesis
+      function speakAndPlay(message, callback) {
+        const utter = new window.SpeechSynthesisUtterance(message);
+        utter.rate = .45; // Slow speech
+        utter.onend = callback;
+        window.speechSynthesis.speak(utter);
+      }
+
+      // UI management
+      function createRadioButtons() {
+        const radioGroup = document.getElementById('radio-group');
+        radioGroup.innerHTML = '';
+        
+        SOUND_FILES.forEach((file, idx) => {
+          const label = document.createElement('label');
+          label.className = 'flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors';
+          
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = 'sound-choice';
+          radio.value = idx.toString();
+          radio.disabled = true;
+          radio.className = 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300';
+          
+          radio.addEventListener('click', () => handleRadioClick(idx));
+          
+          const textSpan = document.createElement('span');
+          textSpan.className = 'text-sm text-gray-700';
+          textSpan.textContent = 'Sound ' + (idx + 1);
+          
+          label.appendChild(radio);
+          label.appendChild(textSpan);
+          radioGroup.appendChild(label);
+        });
+      }
+
+      // Event handlers
+      function handleRadioClick(idx) {
+        if (state.allSoundsPlayed && idx === state.correctAnswerIndex) {
+          window.top.postMessage("success", '*');
+        } else if (!state.allSoundsPlayed) {
+          stopPlayback();
+          speakAndPlay("Please wait until all sounds have played. I will now repeat the instructions.", () => {
+            document.getElementById('play-sounds').click();
+          });
+        } else {
+          stopPlayback();
+          state.allSoundsPlayed = false;
+          speakAndPlay("You have selected the wrong sound. Please try again.", () => {
+            document.getElementById('play-sounds').click();
+          });
+        }
+      }
+
+      function handlePlayButtonClick() {
+        stopPlayback();
+        
+        // Enable radio buttons
+        document.querySelectorAll('input[name="sound-choice"]').forEach(r => {
+          r.disabled = false;
+          r.checked = false;
+        });
+
+        const shuffled = shuffle([...SOUND_FILES]);
+        state.correctAnswerIndex = shuffled.findIndex(file => file === '/sounds/birds5.mp3');
+        
+        let idx = 0;
+        const audio = new Audio();
+        state.currentAudio = audio;
+        state.isPlaying = true;
+
+        function playNext() {
+          if (idx < shuffled.length && state.isPlaying) {
+            speakAndPlay(
+              "You will now hear bird call number " + (idx + 1) + 
+              ". Please remember to select the sound that you do not believe came from a real bird.",
+              () => {
+                if (state.isPlaying) {
+                  audio.src = shuffled[idx];
+                  audio.play();
+                }
+              }
+            );
+          } else if (idx >= shuffled.length) {
+            speakAndPlay(
+              "You have heard all five bird calls. Please select the sound that you do not believe came from a real bird.",
+              () => {
+                state.allSoundsPlayed = true;
+              }
+            );
+          }
+        }
+
+        audio.addEventListener('ended', function() {
+          idx++;
+          playNext();
+        });
+
+        const initialMessage = 
+          'You will now hear five bird calls. To ensure you are not a robot, ' +
+          'please select the sound that you do not believe came from a real bird. ' +
+          'To repeat, You will now hear five bird calls. To ensure you are not a robot, ' +
+          'please select the sound that you do not believe came from a real bird. ' +
+          'Please wait until all sounds have played before selecting a sound.';
+
+        speakAndPlay(initialMessage, playNext);
+      }
+
+      // Initialize
+      function init() {
+        createRadioButtons();
+        document.getElementById('play-sounds').addEventListener('click', handlePlayButtonClick);
+      }
+
+      // Start the application
+      init();
     })(window, document);
   </script>
 </body>
