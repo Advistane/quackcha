@@ -56,11 +56,11 @@
     (function(window, document) {
       // Constants
       const SOUND_FILES = [
-        '../sounds/birds1.mp3',
-        '../sounds/birds2.mp3',
-        '../sounds/birds3.mp3',
-        '../sounds/birds4.mp3',
-        '../sounds/birds5.mp3'
+        'sounds/birds1.mp3',
+        'sounds/birds2.mp3',
+        'sounds/birds3.mp3',
+        'sounds/birds4.mp3',
+        'sounds/birds5.mp3'
       ];
 
       // State management
@@ -92,7 +92,7 @@
       // Speech synthesis
       function speakAndPlay(message, callback) {
         const utter = new window.SpeechSynthesisUtterance(message);
-        utter.rate = .45; // Slow speech
+        utter.rate = 8.45; // Slow speech
         utter.onend = callback;
         window.speechSynthesis.speak(utter);
       }
@@ -153,7 +153,7 @@
         });
 
         const shuffled = shuffle([...SOUND_FILES]);
-        state.correctAnswerIndex = shuffled.findIndex(file => file === '/sounds/birds5.mp3');
+        state.correctAnswerIndex = shuffled.findIndex(file => file === 'sounds/birds5.mp3');
         
         let idx = 0;
         const audio = new Audio();
